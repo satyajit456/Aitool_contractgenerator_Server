@@ -1,5 +1,5 @@
 const express = require('express');
-const {  prompGenerate } = require('../Controller/aiController');
+const { prompGenerate } = require('../Controller/PromptController');
 const Router = express.Router();
 
 
