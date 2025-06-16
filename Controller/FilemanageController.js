@@ -12,19 +12,19 @@ exports.redirectionController = (req, res) => {
     }
 
     // Option 1: Respond with JSON (API response)
-    res.status(200).json({
-      message: 'Redirection data received successfully',
-      data: {
-        user_id,
-        api_key,
-        name,
-        email
-      }
-    });
+    // res.status(200).json({
+    //   message: 'Redirection data received successfully',
+    //   data: {
+    //     user_id,
+    //     api_key,
+    //     name,
+    //     email
+    //   }
+    // });
 
     // Option 2 (alternative): Redirect to frontend with query params
-    // const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
-    // res.redirect(redirectUrl);
+    const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+    res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Error in redirectionController:', error);
