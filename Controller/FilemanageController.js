@@ -2,28 +2,34 @@ const axios = require('axios');
 
 
 exports.redirectionController = (req, res) => {
-  const { user_id, api_key, name, email } = req.body;
+   try {
+    const { user_id, api_key, name, email } = req.body;
 
-  console.log('Redirection data:', { user_id, api_key, name, email });
+    console.log('Redirection data:', { user_id, api_key, name, email });
 
-  if (!user_id || !api_key || !name || !email) {
-    return res.status(400).json({ error: 'Missing user data' });
-  }
-
-  res.status(200).json({
-    message: 'Redirection data received successfully',
-    data: {
-      user_id,
-      api_key,
-      name,
-      email
+    if (!user_id || !api_key || !name || !email) {
+      return res.status(400).json({ error: 'Missing user data' });
     }
-  });
 
-  // Encode the data safely
-//   const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+    // Option 1: Respond with JSON (API response)
+    res.status(200).json({
+      message: 'Redirection data received successfully',
+      data: {
+        user_id,
+        api_key,
+        name,
+        email
+      }
+    });
 
-//   res.redirect(redirectUrl);
+    // Option 2 (alternative): Redirect to frontend with query params
+    // const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+    // res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('Error in redirectionController:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 };
 
 

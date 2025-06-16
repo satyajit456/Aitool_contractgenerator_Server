@@ -8,7 +8,7 @@ const { sendDocument, redirectionController } = require('../Controller/Filemanag
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-Router.post('/redirect_to_ai',redirectionController);
+Router.route('/redirect_to_ai').get(redirectionController).post(redirectionController);
 Router.post('/send-file', upload.single('pdf'),sendDocument);
 
 
