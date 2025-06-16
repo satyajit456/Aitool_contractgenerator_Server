@@ -43,6 +43,10 @@ exports.sendDocument = async (req, res) => {
 
      const { user_id, api_key } = req.cookies;
 
+
+     console.log("xxxxxxxxxxxxxxxxxxx",file,user_id,api_key);
+     
+
     if (!user_id || !api_key) {
       return res.status(400).json({ error: "Missing user credentials in cookies" });
     }
