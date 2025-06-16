@@ -11,6 +11,10 @@ const dbConnection = require("./config/dbConnection");
 
 //config..............>
 dotenv.config({ path: "config/.env" });
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json());
 app.use(cors());
