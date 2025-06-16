@@ -17,7 +17,6 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors());
 app.use(function (err, req, res, next) {
   // Handle specific errors like 502, 504, etc.
   if (err.status === 502 || err.status === 504) {
