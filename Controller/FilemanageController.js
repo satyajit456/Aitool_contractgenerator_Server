@@ -51,6 +51,8 @@ exports.sendDocument = async (req, res) => {
     const { user_id, api_key } = req.cookies;
     const file = req.file;
 
+    console.log("xxxxxxxxxxxxxxxxxxx", file, user_id, api_key);
+
     if (!user_id || !api_key) {
       return res
         .status(400)
@@ -60,8 +62,6 @@ exports.sendDocument = async (req, res) => {
     if (!file) {
       return res.status(400).json({ error: "Missing file" });
     }
-
-    console.log("xxxxxxxxxxxxxxxxxxx", file, user_id, api_key);
 
     const base64Content = file.buffer.toString("base64");
 
