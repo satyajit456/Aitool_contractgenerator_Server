@@ -46,7 +46,7 @@ exports.prompGenerate = async (req, res) => {
       const partyList = Array.from(partyNames);
       const instruction = generateNewContractInstruction(prompt, contractType, partyList);
       const html = await generateContractHtml(instruction);
-      const summary = await generateSummary(html);
+      const summary = await generateSummary(html,prompt);
 
       return res.status(200).json({
         response: html,
@@ -93,9 +93,9 @@ async function generateContractHtml(instruction) {
 }
 
 // Generate detailed summary from contract HTML
-async function generateSummary(html) {
-  const instruction = `Summarize the following HTML-formatted contract into a single clear descriptive paragraph in plain English. 
-Avoid listing bullet points or headings. Keep the language professional and informative. Focus on summarizing key aspects such as parties involved, purpose, obligations, terms, and any notable clauses.
+async function generateSummary(html, prompt) {
+  const instruction = `Summarize the following HTML-formatted contract based on the prompt: "${prompt}". 
+Focus on details such as what actually changes in this contrcat that point mentation.
 
 HTML Contract:
 ${html}
@@ -118,6 +118,7 @@ Return only the plain summary paragraph.`;
 
   return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Summary not available';
 }
+
 
 // Instruction to generate new contract
 function generateNewContractInstruction(prompt, contractType, partyNames) {
@@ -171,31 +172,28 @@ Return ONLY the HTML-formatted contract content without any markdown code blocks
 
 // Instruction to edit contract
 function generateEditInstruction(existingText, prompt) {
-  return `You are a professional contract editor. Review and modify the existing contract below based on the specified changes.
+  return `You are a professional contract editor. Your task is to strictly apply the following requested changes to the existing HTML-formatted contract.
 
 EXISTING CONTRACT:
 ${existingText}
 
 REQUESTED CHANGES: "${prompt}"
 
-INSTRUCTIONS:
-- Maintain the existing professional format and structure
-- Only modify sections relevant to the requested changes
-- Preserve all existing HTML formatting and styling
-- Ensure legal consistency throughout the document
-- Keep the professional tone and legal language
-- Update section numbers if new clauses are added
-- Maintain Arial font family styling
+MANDATORY INSTRUCTIONS:
+- Ensure ALL requested changes are reflected in the contract.
+- If the prompt asks to ADD something (e.g., clause, party, amount), it MUST be added.
+- If the prompt asks to REMOVE or MODIFY, ensure those sections are fully updated.
+- If the change involves new sections, insert them with appropriate numbering.
+- Update references and numbering if affected by edits.
 
-EDITING GUIDELINES:
-- If adding new clauses, place them in the appropriate section
-- If modifying existing terms, ensure they align with other contract provisions
-- If removing content, ensure no references to removed sections remain
-- Update any cross-references as needed
-- Maintain proper legal formatting and numbering
+STYLE AND FORMAT RULES:
+- Keep existing HTML formatting, tags, and styles (Arial font, spacing, margins).
+- Maintain professional legal tone and consistent section structure.
+- Return only HTML contract content, not full HTML document structure.
 
-Return the complete updated contract in HTML format without any markdown code blocks or explanations. Return only the contract content, not full HTML document structure.`;
+Double-check the final result to ensure all prompt-based edits are included.`;
 }
+
 
 // Clean up HTML from AI
 function cleanHtmlResponse(htmlContent) {

@@ -28,12 +28,15 @@ const server = http.createServer(app);
 
 //Route Import----------------->
 const propmt = require("./Routes/AiRoutes");
+const file = require("./Routes/FileRoutes");
 
 
-app.use("/api", propmt);
+
 app.get("/test", (req, res) => {
   res.send("Welcome to the AI Tool API");
 });
+app.use("/api", propmt);
+app.use("/api", file);
 
 // dbConnection-------------->
 // createAdmin();
