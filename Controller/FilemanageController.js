@@ -10,10 +10,20 @@ exports.redirectionController = (req, res) => {
     return res.status(400).json({ error: 'Missing user data' });
   }
 
-  // Encode the data safely
-  const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+  res.status(200).json({
+    message: 'Redirection data received successfully',
+    data: {
+      user_id,
+      api_key,
+      name,
+      email
+    }
+  });
 
-  res.redirect(redirectUrl);
+  // Encode the data safely
+//   const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+
+//   res.redirect(redirectUrl);
 };
 
 
