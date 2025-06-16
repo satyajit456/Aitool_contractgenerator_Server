@@ -11,7 +11,7 @@ exports.redirectionController = async(req, res) => {
       return res.status(400).json({ error: "Missing user data" });
     }
 
-    await redis.set(`user:${user_id}`, JSON.stringify({ user_id, api_key, name, email }));
+    await redis.set(`userdata`, JSON.stringify({ user_id, api_key, name, email }));
 
 
     const redirectUrl = process.env.FRONTEND_URL;
@@ -37,14 +37,14 @@ exports.sendDocument = async (req, res) => {
       return res.status(400).json({ error: "Missing file" });
     }
 
-    const userDataRaw = await redis.get(`user:${user_id}`);
+    const userDataRaw = await redis.get("userdata");
     if (!userDataRaw) {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const {user_id, api_key} = JSON.parse(userDataRaw);
+    const { user_id, api_key } = JSON.parse(userDataRaw);
 
-    log("User data from Redis:", { user_id, api_key });
+    log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
 
     const base64Content = file.buffer.toString("base64");
 
