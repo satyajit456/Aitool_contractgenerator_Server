@@ -33,20 +33,27 @@ exports.redirectionController = (req, res) => {
 exports.sendDocument = async (req, res) => {
   try {
     const file = req.file;
-    const { user_id, api_key } = req.body;
 
-    if (!file || !user_id || !api_key) {
+    if (!file) {
       return res
         .status(400)
-        .json({ error: "Missing file, user_id or api_key" });
+        .json({ error: "Missing file" });
     }
 
-    const base64Content = file.buffer.toString("base64");
+
+     const { user_id, api_key } = req.cookies;
+
+    if (!user_id || !api_key) {
+      return res.status(400).json({ error: "Missing user credentials in cookies" });
+    }
+
+        const base64Content = file.buffer.toString("base64");
+    
 
     const payload = {
       user_id,
       api_key,
-      sign_type: 0,
+      sign_type: 3,
       uploaddocument: [
         {
           content: base64Content,
@@ -58,6 +65,10 @@ exports.sendDocument = async (req, res) => {
         {
           name: "Jack",
           email_address: "jack@demo-mail.com",
+        },
+        {
+          name: "Jill",
+          email_address: "jill@demo-mail.com",
         },
       ],
       mail_subject: "Please Sign the document.",
@@ -75,9 +86,12 @@ exports.sendDocument = async (req, res) => {
       }
     );
 
+    console.log("xxxxxxxxxxxxxxxxxxxxxxx",response.data);
+    
+
     res.status(200).json({
       message: "Document sent successfully",
-      //   data: response.data
+      data: response.data,
     });
   } catch (error) {
     console.error(

@@ -9,7 +9,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 Router.route('/redirect_to_ai').get(redirectionController).post(redirectionController);
-Router.post('/send-file', upload.single('pdf'),sendDocument);
+Router.post('/send_to_wesignature', upload.single('file'),sendDocument);
 
 
 module.exports = Router;
