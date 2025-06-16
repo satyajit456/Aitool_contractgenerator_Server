@@ -12,7 +12,7 @@ const dbConnection = require("./config/dbConnection");
 //config..............>
 dotenv.config({ path: "config/.env" });
 app.use(cors({
-  origin: "https://iridescent-selkie-d31735.netlify.app/",
+  origin: "https://dev.wesignature.com/",
   credentials: true,
 }));
 app.use(cookieParser());
