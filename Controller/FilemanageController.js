@@ -44,7 +44,7 @@ exports.sendDocument = async (req, res) => {
 
     const { user_id, api_key } = JSON.parse(userDataRaw);
 
-    log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
+    console.log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
 
     const base64Content = file.buffer.toString("base64");
 
