@@ -11,19 +11,7 @@ exports.redirectionController = (req, res) => {
       return res.status(400).json({ error: 'Missing user data' });
     }
 
-    // Option 1: Respond with JSON (API response)
-    // res.status(200).json({
-    //   message: 'Redirection data received successfully',
-    //   data: {
-    //     user_id,
-    //     api_key,
-    //     name,
-    //     email
-    //   }
-    // });
-
-    // Option 2 (alternative): Redirect to frontend with query params
-    const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+    const redirectUrl = `${process.env.FRONTEND_URL}?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
 
     res.status(200).json({ redirectUrl });
 
