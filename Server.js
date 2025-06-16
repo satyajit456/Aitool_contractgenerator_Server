@@ -12,11 +12,12 @@ const dbConnection = require("./config/dbConnection");
 //config..............>
 dotenv.config({ path: "config/.env" });
 app.use(cors({
-  origin: "https://dev.wesignature.com/",
+  origin: "*",
   credentials: true,
 }));
 app.use(cookieParser());
 app.use(express.json());
+// app.use(cors());
 app.use(function (err, req, res, next) {
   // Handle specific errors like 502, 504, etc.
   if (err.status === 502 || err.status === 504) {
