@@ -10,10 +10,26 @@ exports.redirectionController = (req, res) => {
       return res.status(400).json({ error: "Missing user data" });
     }
 
-    res.cookie("user_id", user_id, { httpOnly: false });
-    res.cookie("api_key", api_key, { httpOnly: false });
-    res.cookie("name", name, { httpOnly: false });
-    res.cookie("email", email, { httpOnly: false });
+    res.cookie("user_id", user_id, {
+      httpOnly: false,
+      sameSite: "None",
+      secure: true,
+    });
+    res.cookie("api_key", api_key, {
+      httpOnly: false,
+      sameSite: "None",
+      secure: true,
+    });
+    res.cookie("name", name, {
+      httpOnly: false,
+      sameSite: "None",
+      secure: true,
+    });
+    res.cookie("email", email, {
+      httpOnly: false,
+      sameSite: "None",
+      secure: true,
+    });
 
     const redirectUrl = process.env.FRONTEND_URL;
 
@@ -32,27 +48,22 @@ exports.redirectionController = (req, res) => {
 
 exports.sendDocument = async (req, res) => {
   try {
+    const { user_id, api_key } = req.cookies;
     const file = req.file;
 
-    if (!file) {
+    if (!user_id || !api_key) {
       return res
         .status(400)
-        .json({ error: "Missing file" });
+        .json({ error: "Missing user credentials in cookies" });
     }
 
-
-     const { user_id, api_key } = req.cookies;
-
-
-     console.log("xxxxxxxxxxxxxxxxxxx",file,user_id,api_key);
-     
-
-    if (!user_id || !api_key) {
-      return res.status(400).json({ error: "Missing user credentials in cookies" });
+    if (!file) {
+      return res.status(400).json({ error: "Missing file" });
     }
 
-        const base64Content = file.buffer.toString("base64");
-    
+    console.log("xxxxxxxxxxxxxxxxxxx", file, user_id, api_key);
+
+    const base64Content = file.buffer.toString("base64");
 
     const payload = {
       user_id,
@@ -90,8 +101,7 @@ exports.sendDocument = async (req, res) => {
       }
     );
 
-    console.log("xxxxxxxxxxxxxxxxxxxxxxx",response.data);
-    
+    console.log("xxxxxxxxxxxxxxxxxxxxxxx", response.data);
 
     res.status(200).json({
       message: "Document sent successfully",
