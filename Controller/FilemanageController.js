@@ -1,6 +1,7 @@
 const axios = require("axios");
+const redis = require("../config/redisConfig");
 
-exports.redirectionController = (req, res) => {
+exports.redirectionController = async(req, res) => {
   try {
     const { user_id, api_key, name, email } = req.body;
 
@@ -10,26 +11,8 @@ exports.redirectionController = (req, res) => {
       return res.status(400).json({ error: "Missing user data" });
     }
 
-    res.cookie("user_id", user_id, {
-      httpOnly: false,
-      sameSite: "None",
-      secure: true,
-    });
-    res.cookie("api_key", api_key, {
-      httpOnly: false,
-      sameSite: "None",
-      secure: true,
-    });
-    res.cookie("name", name, {
-      httpOnly: false,
-      sameSite: "None",
-      secure: true,
-    });
-    res.cookie("email", email, {
-      httpOnly: false,
-      sameSite: "None",
-      secure: true,
-    });
+    await redis.set(`user:${user_id}`, JSON.stringify({ user_id, api_key, name, email }));
+
 
     const redirectUrl = process.env.FRONTEND_URL;
 
@@ -48,20 +31,20 @@ exports.redirectionController = (req, res) => {
 
 exports.sendDocument = async (req, res) => {
   try {
-    const { user_id, api_key } = req.cookies;
     const file = req.file;
-
-    console.log("xxxxxxxxxxxxxxxxxxx", file, user_id, api_key);
-
-    if (!user_id || !api_key) {
-      return res
-        .status(400)
-        .json({ error: "Missing user credentials in cookies" });
-    }
 
     if (!file) {
       return res.status(400).json({ error: "Missing file" });
     }
+
+    const userDataRaw = await redis.get(`user:${user_id}`);
+    if (!userDataRaw) {
+      return res.status(401).json({ error: "User not found in Redis" });
+    }
+
+    const {user_id, api_key} = JSON.parse(userDataRaw);
+
+    log("User data from Redis:", { user_id, api_key });
 
     const base64Content = file.buffer.toString("base64");
 

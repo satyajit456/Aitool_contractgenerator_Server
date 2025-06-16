@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const http = require("http");
 const cookieParser = require("cookie-parser");
+const redisconfig = require("./config/redisConfig");
 
 //dbconnection and admin create ------->
 const dbConnection = require("./config/dbConnection");
@@ -26,6 +27,7 @@ app.use(function (err, req, res, next) {
     next(err);
   }
 });
+// redisconfig()
 
 // Create the server---------->
 const server = http.createServer(app);
@@ -41,6 +43,8 @@ app.get("/test", (req, res) => {
 });
 app.use("/api", propmt);
 app.use("/api", file);
+
+
 
 // dbConnection-------------->
 // createAdmin();
