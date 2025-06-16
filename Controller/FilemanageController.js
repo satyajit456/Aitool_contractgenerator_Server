@@ -24,7 +24,8 @@ exports.redirectionController = (req, res) => {
 
     // Option 2 (alternative): Redirect to frontend with query params
     const redirectUrl = `${process.env.FRONTEND_URL}/?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(api_key)}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
-    res.redirect(redirectUrl);
+
+    res.status(200).json({ redirectUrl });
 
   } catch (error) {
     console.error('Error in redirectionController:', error);
