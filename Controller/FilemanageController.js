@@ -27,58 +27,43 @@ exports.redirectionController = async(req, res) => {
 exports.sendDocument = async (req, res) => {
   try {
     const file = req.file;
+    if (!file) return res.status(400).json({ error: "Missing file" });
 
-    if (!file) {
-      return res.status(400).json({ error: "Missing file" });
-    }
-
-    // Get owner info from Redis
     const userDataRaw = await redis.get("userdata");
-    if (!userDataRaw) {
-      return res.status(401).json({ error: "User not found in Redis" });
-    }
+    if (!userDataRaw) return res.status(401).json({ error: "User not found in Redis" });
 
     const { user_id, api_key, name: ownerName, email: ownerEmail } = JSON.parse(userDataRaw);
 
-    // Parse the PDF for signer names
     const pdfData = await pdfParse(file.buffer);
     const text = pdfData.text;
 
-    // Extract names from the "SIGNATURES" section
-    const signaturesSectionMatch = text.match(/SIGNATURES([\s\S]+)$/i);
+    // Extract signer names from the SIGNATURES section
     const signerNames = [];
+    const lines = text.split('\n').map(line => line.trim());
 
-    if (signaturesSectionMatch) {
-      const lines = signaturesSectionMatch[1].split('\n').map(line => line.trim()).filter(Boolean);
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i] === '_________________________') {
-          const nameLine = lines[i + 1];
-          if (nameLine && !signerNames.includes(nameLine)) {
-            signerNames.push(nameLine);
-          }
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (lines[i] === '_________________________') {
+        const nextLine = lines[i + 1];
+        if (
+          nextLine &&
+          nextLine !== '_________________________' &&
+          !signerNames.includes(nextLine)
+        ) {
+          signerNames.push(nextLine);
         }
       }
     }
 
-    // Ensure no duplicates and owner is first with email
-    const finalSigners = [
-      {
-        name: ownerName,
-        email_address: ownerEmail,
-      },
-      ...signerNames
-        .filter(name => name !== ownerName)
-        .map(name => ({
-          name,
-          email_address: '',
-        })),
-    ];
-
-    console.log("Final signers:", finalSigners);
-    
+    // Build signers array: owner with email, rest with blank email
+    const signers = signerNames.map(name => ({
+      name,
+      email_address: name === ownerName ? ownerEmail : '',
+    }));
 
     const base64Content = file.buffer.toString("base64");
 
+    console.log("signer>>>>>>>>",signers);
+    
     const payload = {
       user_id,
       api_key,
@@ -90,7 +75,7 @@ exports.sendDocument = async (req, res) => {
         },
       ],
       is_for_embedded_signing: 0,
-      signers: finalSigners,
+      signers,
       mail_subject: "Please Sign the document.",
       mail_message: "Kindly sign document immediately.",
     };
@@ -119,7 +104,7 @@ exports.sendDocument = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in sendDocument:", error);
+    console.error("sendDocument error:", error);
     res.status(500).json({ error: "Failed to send document" });
   }
 };
