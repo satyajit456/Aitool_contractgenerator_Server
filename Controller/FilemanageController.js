@@ -74,25 +74,48 @@ exports.sendDocument = async (req, res) => {
 
     console.log("🧠 AI Raw Response:", aiText);
 
-    // 🧹 Clean and parse name array
-    const nameArray = JSON.parse(
-      aiText.replace(/`/g, "").replace(/^\s*["']?|["']?\s*$/g, "")
-    );
-
-    if (!Array.isArray(nameArray)) {
-      return res.status(400).json({ error: "Invalid name list from AI" });
+    // Parse AI response to extract names
+    let extractedNames;
+    try {
+      extractedNames = JSON.parse(aiText);
+      if (!Array.isArray(extractedNames)) {
+        throw new Error("AI response is not a valid array");
+      }
+    } catch (error) {
+      console.error("Error parsing AI response:", error.message);
+      extractedNames = [];
     }
 
-    // 🔁 Match names and prepare signer objects
-    const signers = nameArray.map((name) => {
-      const normalizedAIName = name.trim().toLowerCase().replace(/\s+/g, "");
-      const normalizedOwnerName = ownerName.trim().toLowerCase().replace(/\s+/g, "");
+    // Initialize signers array
+    let signers = [];
 
-      return {
-        name: name,
-        email_address: normalizedAIName === normalizedOwnerName ? ownerEmail : "",
-      };
+    // Find owner (name matching ownerName from Redis)
+    const owner = extractedNames.find((name) => name.toLowerCase() === ownerName.toLowerCase());
+
+    if (owner) {
+      // Set owner with email from Redis
+      signers.push({
+        name: owner,
+        email_address: ownerEmail,
+      });
+    }
+
+    // Add other names as signers with blank emails
+    const otherSigners = extractedNames.filter((name) => name.toLowerCase() !== ownerName.toLowerCase());
+    otherSigners.forEach((name) => {
+      signers.push({
+        name,
+        email_address: "",
+      });
     });
+
+    // If no owner was found in extracted names, add Redis owner as default
+    if (!owner) {
+      signers.push({
+        name: ownerName,
+        email_address: ownerEmail,
+      });
+    }
 
     console.log("✍️ Final Signers:", signers);
 
