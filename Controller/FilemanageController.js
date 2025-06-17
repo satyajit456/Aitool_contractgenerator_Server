@@ -84,17 +84,23 @@ exports.sendDocument = async (req, res) => {
       }
     );
 
-    console.log("xxxxxxxxxxxxxxxxxxxxxxx", response.data);
+    const originalGuid = response?.data?.data?.guid;
+
+    if (!originalGuid) {
+      return res.status(500).json({ error: "Missing GUID in response" });
+    }
+
+    const originalEditUrl = `https://app.wesignature.com/doc_prepare/?guid=${originalGuid}`;
+    const modifiedEditUrl = originalEditUrl.replace(
+      "https://app.wesignature.com",
+      "https://dev.wesignature.com"
+    );
 
     res.status(200).json({
-      message: "Document sent successfully",
-      data: response.data,
+      editUrl: modifiedEditUrl,
     });
+
   } catch (error) {
-    console.error(
-      "Error sending document:",
-      error.response?.data || error.message
-    );
     res.status(500).json({ error: "Failed to send document" });
   }
 };
