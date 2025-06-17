@@ -2,7 +2,6 @@ const axios = require("axios");
 const redis = require("../config/redisConfig");
 const pdfParse = require("pdf-parse");
 
-
 exports.redirectionController = async (req, res) => {
   try {
     const { user_id, api_key, name, email } = req.body;
@@ -41,8 +40,18 @@ exports.sendDocument = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id, api_key, name: ownerName, email: ownerEmail } = JSON.parse(userDataRaw);
-    console.log("User data from Redis:", { user_id, api_key, ownerName, ownerEmail });
+    const {
+      user_id,
+      api_key,
+      name: ownerName,
+      email: ownerEmail,
+    } = JSON.parse(userDataRaw);
+    console.log("User data from Redis:", {
+      user_id,
+      api_key,
+      ownerName,
+      ownerEmail,
+    });
 
     // 🧠 Prompt Gemini to extract names
     const geminiPrompt = `
@@ -86,11 +95,23 @@ exports.sendDocument = async (req, res) => {
       extractedNames = [];
     }
 
+    // Log extracted names for debugging
+    console.log("Extracted Names:", extractedNames);
+
     // Initialize signers array
     let signers = [];
 
+    // Normalize ownerName for comparison (remove extra spaces, etc.)
+    const normalizedOwnerName = ownerName.trim().toLowerCase();
+    console.log("Normalized Owner Name from Redis:", normalizedOwnerName);
+
     // Find owner (name matching ownerName from Redis)
-    const owner = extractedNames.find((name) => name.toLowerCase() === ownerName.toLowerCase());
+    const owner = extractedNames.find(
+      (name) => name.trim().toLowerCase() === normalizedOwnerName
+    );
+
+    // Log owner for debugging
+    console.log("Owner Found:", owner);
 
     if (owner) {
       // Set owner with email from Redis
@@ -101,7 +122,11 @@ exports.sendDocument = async (req, res) => {
     }
 
     // Add other names as signers with blank emails
-    const otherSigners = extractedNames.filter((name) => name.toLowerCase() !== ownerName.toLowerCase());
+    const otherSigners = extractedNames.filter(
+      (name) => name.trim().toLowerCase() !== normalizedOwnerName
+    );
+    console.log("Other Signers:", otherSigners);
+
     otherSigners.forEach((name) => {
       signers.push({
         name,
@@ -162,9 +187,11 @@ exports.sendDocument = async (req, res) => {
       message: "Document sent successfully",
       editUrl: originalEditUrl,
     });
-
   } catch (error) {
-    console.error("❌ Error in sendDocument:", error?.response?.data || error.message);
+    console.error(
+      "❌ Error in sendDocument:",
+      error?.response?.data || error.message
+    );
     res.status(500).json({ error: "Failed to send document" });
   }
 };
