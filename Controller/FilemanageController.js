@@ -32,7 +32,6 @@ exports.sendDocument = async (req, res) => {
       return res.status(400).json({ error: "Missing file" });
     }
 
-    // Get user data (owner info) from Redis
     const userDataRaw = await redis.get("userdata");
     if (!userDataRaw) {
       return res.status(401).json({ error: "User not found in Redis" });
@@ -42,34 +41,63 @@ exports.sendDocument = async (req, res) => {
     const base64Content = file.buffer.toString("base64");
 
     // 1. Extract text from PDF
-    const pdfData = await pdfParse(file.buffer);
-    const textContent = pdfData.text;
+    let textContent;
+    try {
+      const pdfData = await pdfParse(file.buffer);
+      textContent = pdfData.text;
+    } catch (pdfError) {
+      console.error("PDF Parsing Error:", pdfError.message);
+      return res.status(500).json({ error: "Failed to parse PDF document" });
+    }
 
+    // 2. Known clients (consider fetching from Redis or DB)
+    const knownClients = [
+      { name: "Jill", email: "jill@demo-mail.com" },
+      { name: "Jack", email: "jack@demo-mail.com" },
+      { name: "Tom Hardy", email: "tom@client.com" },
+      { name: "Nihar", email: "nihar@client.com" }, // Added for testing
+      { name: "Frenkie De", email: "frenkie@client.com" }, // Added for testing
+    ];
 
-    console.log("MMMMMMMMMM",textContent);
-    
-
-    // 2. Extract names: support both single and full names
-    const nameMatches = textContent.match(/\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g) || [];
-    const uniqueNames = [...new Set(nameMatches.map(name => name.trim()))];
-
+    // 3. Extract signer names from the "PARTIES" section
     const signers = [];
-
-    // 3. Prepare signers list
-    uniqueNames.forEach(name => {
-      let email = "";
-
-      if (name.toLowerCase() === ownerName.toLowerCase()) {
-        email = ownerEmail;
-      }
-
-      signers.push({
-        name,
-        email_address: email,
+    const partiesSectionMatch = textContent.match(/PARTIES[\s\S]*?between\s+([^\(]+)\s*\("([^\)]+)"\),\s*and\s+([^\(]+)\s*\("([^\)]+)"\)/i);
+    if (partiesSectionMatch) {
+      const [, frenkieFull, frenkieName, niharFull, niharName] = partiesSectionMatch;
+      [frenkieName, niharName].forEach(name => {
+        if (name && !signers.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+          signers.push({ name, email_address: "" });
+        }
       });
+    }
+
+    // 4. Fallback: Extract names from the entire document using a more flexible regex
+    if (signers.length === 0) {
+      const nameMatches = textContent.match(/\b[A-Z][a-zA-Z'-]*(?:\s+[A-Z][a-zA-Z'-]*)*\b/g) || [];
+      const uniqueNames = [...new Set(nameMatches.filter(name => 
+        // Filter out common words or invalid names
+        !["This", "Agreement", "WHEREAS", "IN", "WITNESS", "WHEREOF"].includes(name)
+      ))];
+      uniqueNames.forEach(name => {
+        if (!signers.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+          signers.push({ name, email_address: "" });
+        }
+      });
+    }
+
+    // 5. Assign emails to signers
+    signers.forEach(signer => {
+      if (signer.name.toLowerCase() === ownerName.toLowerCase()) {
+        signer.email_address = ownerEmail;
+      } else {
+        const known = knownClients.find(client => client.name.toLowerCase() === signer.name.toLowerCase());
+        if (known) {
+          signer.email_address = known.email;
+        }
+      }
     });
 
-    // 4. Ensure owner is always added even if not matched
+    // 6. Ensure owner is included
     if (!signers.some(s => s.name.toLowerCase() === ownerName.toLowerCase())) {
       signers.push({
         name: ownerName,
@@ -77,11 +105,13 @@ exports.sendDocument = async (req, res) => {
       });
     }
 
+    // 7. Validate signers
+    const validSigners = signers.filter(signer => signer.email_address);
+    if (validSigners.length === 0) {
+      return res.status(400).json({ error: "No valid signers with email addresses found" });
+    }
 
-    console.log(">>>>>>",signers);
-    
-
-    // 5. Build payload for WeSignature
+    // 8. Build WeSignature payload
     const payload = {
       user_id,
       api_key,
@@ -95,10 +125,9 @@ exports.sendDocument = async (req, res) => {
       is_for_embedded_signing: 0,
       signers,
       mail_subject: "Please Sign the document.",
-      mail_message: "Kindly sign the document immediately.",
+      mail_message: "Kindly sign document immediately.",
     };
 
-    // 6. Send to WeSignature
     const response = await axios.post(
       `${process.env.WESIGNATURE_URL}/apihandler/senddocumentapi_upload`,
       payload,
@@ -121,7 +150,7 @@ exports.sendDocument = async (req, res) => {
       editUrl: originalEditUrl,
     });
   } catch (error) {
-    console.error("WeSignature Error:", error?.response?.data || error.message);
+    console.log("WeSignature Error:", error?.response?.data || error.message);
     res.status(500).json({ error: "Failed to send document" });
   }
 };
