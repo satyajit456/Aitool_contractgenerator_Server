@@ -36,11 +36,44 @@ exports.sendDocument = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id, api_key } = JSON.parse(userDataRaw);
-
-    console.log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
-
+    const { user_id, api_key, name: ownerName, email: ownerEmail } = JSON.parse(userDataRaw);
     const base64Content = file.buffer.toString("base64");
+
+    // Step 1: Extract text from PDF
+    const pdfData = await pdfParse(file.buffer);
+    const textContent = pdfData.text;
+
+    // Step 2: Detect if owner name is present
+    const isOwnerInFile = new RegExp(ownerName, "i").test(textContent);
+
+    // Step 3: Try to extract another name (mock logic for example)
+    let clientName = "Client";
+    let clientEmail = "client@example.com";
+
+    const knownClients = [
+      { name: "Jill", email: "jill@demo-mail.com" },
+      { name: "Jack", email: "jack@demo-mail.com" },
+    ];
+
+    const matchedClient = knownClients.find(client =>
+      new RegExp(client.name, "i").test(textContent)
+    );
+
+    if (matchedClient) {
+      clientName = matchedClient.name;
+      clientEmail = matchedClient.email;
+    }
+
+    // Step 4: Dynamically build signers list
+    const signers = [];
+
+    if (isOwnerInFile) {
+      signers.push({ name: ownerName, email_address: ownerEmail });
+    }
+
+    if (matchedClient) {
+      signers.push({ name: clientName, email_address: clientEmail });
+    }
 
     const payload = {
       user_id,
@@ -53,16 +86,7 @@ exports.sendDocument = async (req, res) => {
         },
       ],
       is_for_embedded_signing: 0,
-      signers: [
-        {
-          name: "Jack",
-          email_address: "jack@demo-mail.com",
-        },
-        {
-          name: "Jill",
-          email_address: "jill@demo-mail.com",
-        },
-      ],
+      signers,
       mail_subject: "Please Sign the document.",
       mail_message: "Kindly sign document immediately.",
     };
@@ -79,7 +103,6 @@ exports.sendDocument = async (req, res) => {
     );
 
     const originalGuid = response?.data?.data?.guid;
-
     if (!originalGuid) {
       return res.status(500).json({ error: "Missing GUID in response" });
     }
@@ -89,10 +112,8 @@ exports.sendDocument = async (req, res) => {
     res.status(200).json({
       editUrl: originalEditUrl,
     });
-
   } catch (error) {
-    console.log(error);
-    
+    console.log("WeSignature Error:", error?.response?.data || error.message);
     res.status(500).json({ error: "Failed to send document" });
   }
 };

@@ -4,8 +4,6 @@ const redis = require('../config/redisConfig');
 // Main controller
 exports.prompGenerate = async (req, res) => {
   try {
-    const userDataStr = await redis.get('userdata');
-    console.log(userDataStr);
     const { prompt, existingText, contractType = 'general', count } = req.body;
 
     if (!prompt || prompt.trim() === '') {
