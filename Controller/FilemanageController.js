@@ -78,8 +78,6 @@ exports.sendDocument = async (req, res) => {
       }
     );
 
-    console.log("Response from WeSignature API:", response.data);
-    
     const originalGuid = response?.data?.data?.guid;
 
     if (!originalGuid) {
@@ -87,8 +85,6 @@ exports.sendDocument = async (req, res) => {
     }
 
     const originalEditUrl = `${process.env.WESIGNATURE_URL}/doc_prepare/?guid=${originalGuid}`;
-
-    console.log("Modified Edit URL:", originalEditUrl);
 
     res.status(200).json({
       editUrl: originalEditUrl,

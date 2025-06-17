@@ -1,17 +1,11 @@
 const axios = require('axios');
-
-// Generate random names for contract parties
-function getRandomName() {
-  const firstNames = ['John', 'Emily', 'Michael', 'Sophia', 'David', 'Olivia'];
-  const lastNames = ['Smith', 'Johnson', 'Brown', 'Williams', 'Jones', 'Davis'];
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-  return `${firstName} ${lastName}`;
-}
+const redis = require('../config/redisConfig');
 
 // Main controller
 exports.prompGenerate = async (req, res) => {
   try {
+    const userDataStr = await redis.get('userdata');
+    console.log(userDataStr);
     const { prompt, existingText, contractType = 'general', count } = req.body;
 
     if (!prompt || prompt.trim() === '') {
@@ -25,7 +19,7 @@ exports.prompGenerate = async (req, res) => {
     if (existingText && !forceNew) {
       const instruction = generateEditInstruction(existingText, prompt);
       const html = await generateContractHtml(instruction);
-      const summary = await generateSummary(html);
+      const summary = await generateSummary(html, prompt);
 
       return res.status(200).json({
         response: html,
@@ -39,14 +33,31 @@ exports.prompGenerate = async (req, res) => {
     } else {
       const totalParties = Math.min(Math.max(parseInt(count) || 2, 2), 10);
       const partyNames = new Set();
+
+      // Self-reference detection
+      const selfMentioned = /\b(i|me|myself)\b/i.test(prompt);
+      let ownerName = '[Owner Name]'; 
+
+      if (selfMentioned ) {
+        const userDataStr = await redis.get('userdata');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          if (userData?.name) {
+            ownerName = userData.name;
+          }
+        }
+      }
+
+      partyNames.add(ownerName);
+
       while (partyNames.size < totalParties) {
-        partyNames.add(getRandomName());
+        partyNames.add(`Participant ${partyNames.size + 1}`);
       }
 
       const partyList = Array.from(partyNames);
       const instruction = generateNewContractInstruction(prompt, contractType, partyList);
       const html = await generateContractHtml(instruction);
-      const summary = await generateSummary(html,prompt);
+      const summary = await generateSummary(html, prompt);
 
       return res.status(200).json({
         response: html,
@@ -95,7 +106,7 @@ async function generateContractHtml(instruction) {
 // Generate detailed summary from contract HTML
 async function generateSummary(html, prompt) {
   const instruction = `Summarize the following HTML-formatted contract based on the prompt: "${prompt}". 
-Focus on details such as what actually changes in this contrcat that point mentation.
+Focus on details such as what actually changes in this contract that point mentions.
 
 HTML Contract:
 ${html}
@@ -104,21 +115,24 @@ Return only the plain summary paragraph.`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-  const response = await axios.post(url, {
-    contents: [{ parts: [{ text: instruction }] }],
-    generationConfig: {
-      temperature: 0.3,
-      topP: 0.8,
-      topK: 40,
-      maxOutputTokens: 1024,
+  const response = await axios.post(
+    url,
+    {
+      contents: [{ parts: [{ text: instruction }] }],
+      generationConfig: {
+        temperature: 0.3,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 1024,
+      },
     },
-  }, {
-    headers: { 'Content-Type': 'application/json' },
-  });
+    {
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
 
   return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Summary not available';
 }
-
 
 // Instruction to generate new contract
 function generateNewContractInstruction(prompt, contractType, partyNames) {
@@ -170,7 +184,7 @@ STYLE GUIDELINES:
 Return ONLY the HTML-formatted contract content without any markdown code blocks or explanations. Do not include full HTML document structure (no <html>, <head>, <body> tags).`;
 }
 
-// Instruction to edit contract
+// Instruction to edit existing contract
 function generateEditInstruction(existingText, prompt) {
   return `You are a professional contract editor. Your task is to strictly apply the following requested changes to the existing HTML-formatted contract.
 
@@ -193,7 +207,6 @@ STYLE AND FORMAT RULES:
 
 Double-check the final result to ensure all prompt-based edits are included.`;
 }
-
 
 // Clean up HTML from AI
 function cleanHtmlResponse(htmlContent) {
