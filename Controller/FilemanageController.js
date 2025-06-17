@@ -16,12 +16,6 @@ exports.redirectionController = async(req, res) => {
 
     const redirectUrl = process.env.FRONTEND_URL;
 
-    // const redirectUrl = `${
-    //   process.env.FRONTEND_URL
-    // }?user_id=${encodeURIComponent(user_id)}&api_key=${encodeURIComponent(
-    //   api_key
-    // )}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
-
     res.status(200).json({ redirectUrl });
   } catch (error) {
     console.error("Error in redirectionController:", error);
@@ -74,7 +68,7 @@ exports.sendDocument = async (req, res) => {
     };
 
     const response = await axios.post(
-      "https://dev.wesignature.com/apihandler/senddocumentapi_upload",
+      `${process.env.WESIGNATURE_URL}/apihandler/senddocumentapi_upload`,
       payload,
       {
         headers: {
@@ -92,16 +86,12 @@ exports.sendDocument = async (req, res) => {
       return res.status(500).json({ error: "Missing GUID in response" });
     }
 
-    const originalEditUrl = `https://app.wesignature.com/doc_prepare/?guid=${originalGuid}`;
-    const modifiedEditUrl = originalEditUrl.replace(
-      "https://app.wesignature.com",
-      "https://dev.wesignature.com"
-    );
+    const originalEditUrl = `${process.env.WESIGNATURE_URL}/doc_prepare/?guid=${originalGuid}`;
 
-    console.log("Modified Edit URL:", modifiedEditUrl);
+    console.log("Modified Edit URL:", originalEditUrl);
 
     res.status(200).json({
-      editUrl: modifiedEditUrl,
+      editUrl: originalEditUrl,
     });
 
   } catch (error) {
