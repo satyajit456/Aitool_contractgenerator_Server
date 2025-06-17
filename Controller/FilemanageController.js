@@ -74,7 +74,7 @@ exports.sendDocument = async (req, res) => {
     };
 
     const response = await axios.post(
-      "https://app.wesignature.com/apihandler/senddocumentapi_upload",
+      "https://dev.wesignature.com/apihandler/senddocumentapi_upload",
       payload,
       {
         headers: {
