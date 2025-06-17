@@ -44,6 +44,8 @@ exports.sendDocument = async (req, res) => {
 
     const { user_id, api_key } = JSON.parse(userDataRaw);
 
+    console.log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
+
     const base64Content = file.buffer.toString("base64");
 
     const payload = {
@@ -72,7 +74,7 @@ exports.sendDocument = async (req, res) => {
     };
 
     const response = await axios.post(
-      `${process.env.WESIGNATURE_URL}/apihandler/senddocumentapi_upload`,
+      "https://app.wesignature.com/apihandler/senddocumentapi_upload",
       payload,
       {
         headers: {
@@ -82,8 +84,6 @@ exports.sendDocument = async (req, res) => {
       }
     );
 
-    console.log("Response from WeSignature:", response.data);
-    
     const originalGuid = response?.data?.data?.guid;
 
     if (!originalGuid) {
