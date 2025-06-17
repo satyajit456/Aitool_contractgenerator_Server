@@ -40,42 +40,50 @@ exports.sendDocument = async (req, res) => {
     const { user_id, api_key, name: ownerName, email: ownerEmail } = JSON.parse(userDataRaw);
     const base64Content = file.buffer.toString("base64");
 
-    // Step 1: Extract text from PDF
+    // 1. Extract text from PDF
     const pdfData = await pdfParse(file.buffer);
     const textContent = pdfData.text;
 
-    // Step 2: Detect if owner name is present
-    const isOwnerInFile = new RegExp(ownerName, "i").test(textContent);
-
-    // Step 3: Try to extract another name (mock logic for example)
-    let clientName = "Client";
-    let clientEmail = "client@example.com";
-
+    // 2. Known clients (extendable)
     const knownClients = [
       { name: "Jill", email: "jill@demo-mail.com" },
       { name: "Jack", email: "jack@demo-mail.com" },
+      { name: "Tom Hardy", email: "tom@client.com" },
     ];
 
-    const matchedClient = knownClients.find(client =>
-      new RegExp(client.name, "i").test(textContent)
-    );
+    // 3. Extract names using basic capitalized name patterns
+    const nameMatches = textContent.match(/\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g) || [];
+    const uniqueNames = [...new Set(nameMatches)];
 
-    if (matchedClient) {
-      clientName = matchedClient.name;
-      clientEmail = matchedClient.email;
-    }
-
-    // Step 4: Dynamically build signers list
     const signers = [];
 
-    if (isOwnerInFile) {
-      signers.push({ name: ownerName, email_address: ownerEmail });
+    uniqueNames.forEach(name => {
+      let email = "";
+
+      if (name.toLowerCase() === ownerName.toLowerCase()) {
+        email = ownerEmail;
+      } else {
+        const known = knownClients.find(client => client.name.toLowerCase() === name.toLowerCase());
+        if (known) {
+          email = known.email;
+        }
+      }
+
+      signers.push({
+        name,
+        email_address: email,
+      });
+    });
+
+    // Ensure owner is added if not found by match
+    if (!signers.some(s => s.name.toLowerCase() === ownerName.toLowerCase())) {
+      signers.push({
+        name: ownerName,
+        email_address: ownerEmail,
+      });
     }
 
-    if (matchedClient) {
-      signers.push({ name: clientName, email_address: clientEmail });
-    }
-
+    // 4. Build WeSignature payload
     const payload = {
       user_id,
       api_key,
