@@ -74,6 +74,9 @@ exports.sendDocument = async (req, res) => {
         })),
     ];
 
+    console.log("Final signers:", finalSigners);
+    
+
     const base64Content = file.buffer.toString("base64");
 
     const payload = {
