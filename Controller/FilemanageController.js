@@ -1,5 +1,6 @@
 const axios = require("axios");
 const redis = require("../config/redisConfig");
+const pdfParse = require("pdf-parse");
 
 exports.redirectionController = async(req, res) => {
   try {
