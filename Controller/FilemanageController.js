@@ -45,6 +45,10 @@ exports.sendDocument = async (req, res) => {
     const pdfData = await pdfParse(file.buffer);
     const textContent = pdfData.text;
 
+
+    console.log("MMMMMMMMMM",textContent);
+    
+
     // 2. Extract names: support both single and full names
     const nameMatches = textContent.match(/\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g) || [];
     const uniqueNames = [...new Set(nameMatches.map(name => name.trim()))];
@@ -72,6 +76,10 @@ exports.sendDocument = async (req, res) => {
         email_address: ownerEmail,
       });
     }
+
+
+    console.log(">>>>>>",signers);
+    
 
     // 5. Build payload for WeSignature
     const payload = {
