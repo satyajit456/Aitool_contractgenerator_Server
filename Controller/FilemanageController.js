@@ -30,6 +30,7 @@ exports.redirectionController = async (req, res) => {
 exports.sendDocument = async (req, res) => {
   try {
     const file = req.file;
+     const text = req.body.text;
 
     if (!file) {
       return res.status(400).json({ error: "Missing file" });
@@ -44,19 +45,16 @@ exports.sendDocument = async (req, res) => {
 
     console.log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
 
-    console.log("MMMMMMMMMMMMMMMMMMMM",file);
-    
-
     // const base64Content = file.buffer.toString("base64");
-    const pdfData = await pdfParse(file.buffer);
-    const extractedText = pdfData.text;
+    // const pdfData = await pdfParse(text.buffer);
+    // const extractedText = pdfData.text;
 
     const geminiPrompt = `
       Analyze the following contract and extract only the names of people or parties involved in the agreement. 
       Return them as a comma-separated list or JSON array. 
       
       Contract Text:
-      ${extractedText}
+      ${text}
     `;
 
     const geminiResponse = await axios.post(
