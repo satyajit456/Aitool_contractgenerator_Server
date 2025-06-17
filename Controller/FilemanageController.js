@@ -44,6 +44,9 @@ exports.sendDocument = async (req, res) => {
 
     console.log("User data from Redis:>>>>>>>>>>>>>", { user_id, api_key });
 
+    console.log("MMMMMMMMMMMMMMMMMMMM",file);
+    
+
     // const base64Content = file.buffer.toString("base64");
     const pdfData = await pdfParse(file.buffer);
     const extractedText = pdfData.text;
