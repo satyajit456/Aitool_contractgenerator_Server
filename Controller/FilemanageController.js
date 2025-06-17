@@ -32,6 +32,7 @@ exports.sendDocument = async (req, res) => {
       return res.status(400).json({ error: "Missing file" });
     }
 
+    // Get user data (owner info) from Redis
     const userDataRaw = await redis.get("userdata");
     if (!userDataRaw) {
       return res.status(401).json({ error: "User not found in Redis" });
@@ -44,29 +45,18 @@ exports.sendDocument = async (req, res) => {
     const pdfData = await pdfParse(file.buffer);
     const textContent = pdfData.text;
 
-    // 2. Known clients (extendable)
-    const knownClients = [
-      { name: "Jill", email: "jill@demo-mail.com" },
-      { name: "Jack", email: "jack@demo-mail.com" },
-      { name: "Tom Hardy", email: "tom@client.com" },
-    ];
-
-    // 3. Extract names using basic capitalized name patterns
-    const nameMatches = textContent.match(/\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g) || [];
-    const uniqueNames = [...new Set(nameMatches)];
+    // 2. Extract names: support both single and full names
+    const nameMatches = textContent.match(/\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g) || [];
+    const uniqueNames = [...new Set(nameMatches.map(name => name.trim()))];
 
     const signers = [];
 
+    // 3. Prepare signers list
     uniqueNames.forEach(name => {
       let email = "";
 
       if (name.toLowerCase() === ownerName.toLowerCase()) {
         email = ownerEmail;
-      } else {
-        const known = knownClients.find(client => client.name.toLowerCase() === name.toLowerCase());
-        if (known) {
-          email = known.email;
-        }
       }
 
       signers.push({
@@ -75,7 +65,7 @@ exports.sendDocument = async (req, res) => {
       });
     });
 
-    // Ensure owner is added if not found by match
+    // 4. Ensure owner is always added even if not matched
     if (!signers.some(s => s.name.toLowerCase() === ownerName.toLowerCase())) {
       signers.push({
         name: ownerName,
@@ -83,7 +73,7 @@ exports.sendDocument = async (req, res) => {
       });
     }
 
-    // 4. Build WeSignature payload
+    // 5. Build payload for WeSignature
     const payload = {
       user_id,
       api_key,
@@ -97,9 +87,10 @@ exports.sendDocument = async (req, res) => {
       is_for_embedded_signing: 0,
       signers,
       mail_subject: "Please Sign the document.",
-      mail_message: "Kindly sign document immediately.",
+      mail_message: "Kindly sign the document immediately.",
     };
 
+    // 6. Send to WeSignature
     const response = await axios.post(
       `${process.env.WESIGNATURE_URL}/apihandler/senddocumentapi_upload`,
       payload,
@@ -122,7 +113,7 @@ exports.sendDocument = async (req, res) => {
       editUrl: originalEditUrl,
     });
   } catch (error) {
-    console.log("WeSignature Error:", error?.response?.data || error.message);
+    console.error("WeSignature Error:", error?.response?.data || error.message);
     res.status(500).json({ error: "Failed to send document" });
   }
 };
