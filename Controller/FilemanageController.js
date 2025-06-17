@@ -32,6 +32,10 @@ exports.sendDocument = async (req, res) => {
       return res.status(400).json({ error: "Missing file" });
     }
 
+    if (!process.env.WESIGNATURE_URL) {
+      return res.status(500).json({ error: "WeSignature URL not configured" });
+    }
+
     const userDataRaw = await redis.get("userdata");
     if (!userDataRaw) {
       return res.status(401).json({ error: "User not found in Redis" });
@@ -44,40 +48,61 @@ exports.sendDocument = async (req, res) => {
     let textContent;
     try {
       const pdfData = await pdfParse(file.buffer);
-      textContent = pdfData.text;
+      textContent = pdfData.text || "";
+      console.log("Extracted PDF text:", textContent.substring(0, 500)); // Log first 500 chars for debugging
     } catch (pdfError) {
       console.error("PDF Parsing Error:", pdfError.message);
       return res.status(500).json({ error: "Failed to parse PDF document" });
     }
 
-    // 2. Known clients (consider fetching from Redis or DB)
-    const knownClients = [
-      { name: "Jill", email: "jill@demo-mail.com" },
-      { name: "Jack", email: "jack@demo-mail.com" },
-      { name: "Tom Hardy", email: "tom@client.com" },
-      { name: "Nihar", email: "nihar@client.com" }, // Added for testing
-      { name: "Frenkie De", email: "frenkie@client.com" }, // Added for testing
-    ];
+    if (!textContent.trim()) {
+      console.warn("No text extracted from PDF");
+    }
 
-    // 3. Extract signer names from the "PARTIES" section
+    // 2. Extract signer names from PDF
     const signers = [];
-    const partiesSectionMatch = textContent.match(/PARTIES[\s\S]*?between\s+([^\(]+)\s*\("([^\)]+)"\),\s*and\s+([^\(]+)\s*\("([^\)]+)"\)/i);
-    if (partiesSectionMatch) {
-      const [, frenkieFull, frenkieName, niharFull, niharName] = partiesSectionMatch;
-      [frenkieName, niharName].forEach(name => {
-        if (name && !signers.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+
+全世界
+
+    // Extract names from "讚 "PARTIES" section
+    const partiesSection = textContent.match(/PARTIES[\s\S]*?(?=RECITALS|TERMS|$)/i);
+    if (partiesSection) {
+      const partiesText = partiesSection[0];
+      // Match names in format: Name ("Name") or standalone proper nouns
+      const nameMatches = partiesText.match(/"([^"]+)"|\b[A-Z][a-zA-Z'-]*(?:\s+[A-Z][a-zA-Z'-]*)*\b/g) || [];
+      const cleanedNames = nameMatches
+        .map(name => name.replace(/"/g, "").trim())
+        .filter(name => name && !["PARTIES", "This", "Agreement", "and"].includes(name));
+      cleanedNames.forEach(name => {
+        if (!signers.some(s => s.name.toLowerCase() === name.toLowerCase())) {
           signers.push({ name, email_address: "" });
         }
       });
     }
 
-    // 4. Fallback: Extract names from the entire document using a more flexible regex
+    // Extract names from "SIGNATURESintersection
+    const signaturesSection = textContent.match(/SIGNATURES[\s\S]*$/i);
+    if (signaturesSection) {
+      const signaturesText = signaturesSection[0];
+      const nameMatches = signaturesText.match(/\b[A-Z][a-zA-Z'-]*(?:\s+[A-Z][a-zA-Z'-]*)*\b/g) || [];
+      const cleanedNames = nameMatches.filter(name => 
+        !["SIGNATURES", "IN", "WITNESS", "WHEREOF"].includes(name)
+      );
+      cleanedNames.forEach(name => {
+        if (!signers.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+          signers.push({ name, email_address: "" });
+        }
+      });
+    }
+
+    // Fallback: ExtractProper nouns from entire document
     if (signers.length === 0) {
       const nameMatches = textContent.match(/\b[A-Z][a-zA-Z'-]*(?:\s+[A-Z][a-zA-Z'-]*)*\b/g) || [];
-      const uniqueNames = [...new Set(nameMatches.filter(name => 
-        // Filter out common words or invalid names
-        !["This", "Agreement", "WHEREAS", "IN", "WITNESS", "WHEREOF"].includes(name)
-      ))];
+      const cleanedNames = nameMatches.filter(name => 
+        !["PARTIES", "RECITALS", "TERMS", "CONDITIONS", "SIGNATURES", "This", 
+          "Agreement", "WHEREAS", "IN", "WITNESS", "WHEREOF", "AND", "OR"].includes(name)
+      );
+      const uniqueNames = [...new Set(cleanedNames)];
       uniqueNames.forEach(name => {
         if (!signers.some(s => s.name.toLowerCase() === name.toLowerCase())) {
           signers.push({ name, email_address: "" });
@@ -85,19 +110,16 @@ exports.sendDocument = async (req, res) => {
       });
     }
 
-    // 5. Assign emails to signers
+    console.log("Extracted signer names:", signers.map(s => s.name)); // Debug log
+
+    // 3. Assign email to owner
     signers.forEach(signer => {
       if (signer.name.toLowerCase() === ownerName.toLowerCase()) {
         signer.email_address = ownerEmail;
-      } else {
-        const known = knownClients.find(client => client.name.toLowerCase() === signer.name.toLowerCase());
-        if (known) {
-          signer.email_address = known.email;
-        }
       }
     });
 
-    // 6. Ensure owner is included
+    // 4. Ensure owner is included
     if (!signers.some(s => s.name.toLowerCase() === ownerName.toLowerCase())) {
       signers.push({
         name: ownerName,
@@ -105,16 +127,9 @@ exports.sendDocument = async (req, res) => {
       });
     }
 
-    // 7. Validate signers
-    const validSigners = signers.filter(signer => signer.email_address);
-    if (validSigners.length === 0) {
-      return res.status(400).json({ error: "No valid signers with email addresses found" });
-    }
+    console.log("Final signers payload:", signers); // Debug log
 
-    console.log(">>>>>>>>>>>",signers);
-    
-
-    // 8. Build WeSignature payload
+    // 5. Build WeSignature payload
     const payload = {
       user_id,
       api_key,
