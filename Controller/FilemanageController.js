@@ -111,6 +111,9 @@ exports.sendDocument = async (req, res) => {
       return res.status(400).json({ error: "No valid signers with email addresses found" });
     }
 
+    console.log(">>>>>>>>>>>",signers);
+    
+
     // 8. Build WeSignature payload
     const payload = {
       user_id,
