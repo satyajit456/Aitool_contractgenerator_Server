@@ -2,7 +2,6 @@ const axios = require("axios");
 const redis = require("../config/redisConfig");
 const pdfParse = require("pdf-parse");
 
-
 // redirection controller
 exports.redirectionController = async (req, res) => {
   try {
@@ -27,7 +26,6 @@ exports.redirectionController = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 // Function to send document to WeSignature
 exports.sendToWesignature = async (req, res) => {
@@ -80,7 +78,7 @@ exports.sendToWesignature = async (req, res) => {
 
     try {
       const cleanedText = aiText
-        .replace(/```json|```/g, "") 
+        .replace(/```json|```/g, "")
         .replace(/\n/g, "")
         .trim();
 
@@ -102,7 +100,7 @@ exports.sendToWesignature = async (req, res) => {
       const matched = normalized === normalizedOwnerName;
       return {
         name,
-        email_address: matched ? ownerEmail : "", 
+        email_address: matched ? ownerEmail : "",
       };
     });
 
@@ -157,31 +155,32 @@ exports.sendToWesignature = async (req, res) => {
   }
 };
 
-
 //function to send document to wefile
 exports.sendToWefile = async (req, res) => {
   try {
     const file = req.file;
 
-    console.log("Received file:", file );
-    
     if (!file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
     const base64Content = file.buffer.toString("base64");
 
-     const userDataRaw = await redis.get("userdata");
+    const userDataRaw = await redis.get("userdata");
     if (!userDataRaw) {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-        const {user_id} = JSON.parse(userDataRaw);
+    const { user_id } = JSON.parse(userDataRaw);
 
     const payload = {
       user_id,
-      uploaddocument: base64Content,
-      filename: file.originalname,
+      uploaddocument: [
+        {
+          content: base64Content,
+          filename: file.originalname,
+        },
+      ],
     };
 
     const response = await axios.post(
@@ -205,6 +204,4 @@ exports.sendToWefile = async (req, res) => {
     console.error("Error in sendToWefile:", error);
     res.status(500).json({ error: "Failed to upload file" });
   }
-}
-
-
+};
