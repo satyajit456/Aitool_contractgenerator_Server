@@ -163,6 +163,8 @@ exports.sendToWefile = async (req, res) => {
   try {
     const file = req.file;
 
+    console.log("Received file:", file );
+    
     if (!file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
@@ -200,7 +202,7 @@ exports.sendToWefile = async (req, res) => {
       Wefileurl: Wefileurl,
     });
   } catch (error) {
-    console.error("Error in sendToWefile:", error.message);
+    console.error("Error in sendToWefile:", error);
     res.status(500).json({ error: "Failed to upload file" });
   }
 }
