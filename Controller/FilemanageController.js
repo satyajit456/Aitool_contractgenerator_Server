@@ -2,6 +2,8 @@ const axios = require("axios");
 const redis = require("../config/redisConfig");
 const pdfParse = require("pdf-parse");
 
+
+// redirection controller
 exports.redirectionController = async (req, res) => {
   try {
     const { user_id, api_key, name, email } = req.body;
@@ -26,7 +28,9 @@ exports.redirectionController = async (req, res) => {
   }
 };
 
-exports.sendDocument = async (req, res) => {
+
+// Function to send document to WeSignature
+exports.sendToWesignature = async (req, res) => {
   try {
     const file = req.file;
     const text = req.body.text;
@@ -50,8 +54,6 @@ exports.sendDocument = async (req, res) => {
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "");
-
-    console.log("🧠 Redis Owner:", { ownerName, ownerEmail });
 
     // Gemini AI Prompt
     const geminiPrompt = `
@@ -92,7 +94,7 @@ exports.sendDocument = async (req, res) => {
       extractedNames = [];
     }
 
-    console.log("📄 Clean Extracted Names:", extractedNames);
+    console.log("Clean Extracted Names:", extractedNames);
 
     // 🔁 Build signers array
     const signers = extractedNames.map((name) => {
@@ -100,7 +102,7 @@ exports.sendDocument = async (req, res) => {
       const matched = normalized === normalizedOwnerName;
       return {
         name,
-        email_address: matched ? ownerEmail : "", // match gets email, others blank
+        email_address: matched ? ownerEmail : "", 
       };
     });
 
@@ -148,9 +150,59 @@ exports.sendDocument = async (req, res) => {
     });
   } catch (error) {
     console.error(
-      "❌ Error in sendDocument:",
+      " Error in sendDocument:",
       error?.response?.data || error.message
     );
     res.status(500).json({ error: "Failed to send document" });
   }
 };
+
+
+//function to send document to wefile
+exports.sendToWefile = async (req, res) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const base64Content = file.buffer.toString("base64");
+
+     const userDataRaw = await redis.get("userdata");
+    if (!userDataRaw) {
+      return res.status(401).json({ error: "User not found in Redis" });
+    }
+
+        const {user_id} = JSON.parse(userDataRaw);
+
+    const payload = {
+      user_id,
+      uploaddocument: base64Content,
+      filename: file.originalname,
+    };
+
+    const response = await axios.post(
+      `${process.env.WESIGNATURE_URL}/apihandler/sendFileToWefile`,
+      payload,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const Wefileurl = response?.data?.data?.wefile_link;
+
+    return res.status(200).json({
+      message: "File uploaded successfully",
+      Wefileurl: Wefileurl,
+    });
+  } catch (error) {
+    console.error("Error in sendToWefile:", error.message);
+    res.status(500).json({ error: "Failed to upload file" });
+  }
+}
+
+
