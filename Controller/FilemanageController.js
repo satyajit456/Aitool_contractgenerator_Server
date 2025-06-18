@@ -40,8 +40,16 @@ exports.sendDocument = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id, api_key, name: ownerName, email: ownerEmail } = JSON.parse(userDataRaw);
-    const normalizedOwnerName = ownerName.trim().toLowerCase().replace(/\s+/g, "");
+    const {
+      user_id,
+      api_key,
+      name: ownerName,
+      email: ownerEmail,
+    } = JSON.parse(userDataRaw);
+    const normalizedOwnerName = ownerName
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "");
 
     console.log("🧠 Redis Owner:", { ownerName, ownerEmail });
 
@@ -62,24 +70,32 @@ exports.sendDocument = async (req, res) => {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    const aiText = geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    const aiText =
+      geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
     console.log("🧠 Gemini Raw Response:", aiText);
 
     let extractedNames = [];
+
     try {
-      extractedNames = JSON.parse(aiText.trim());
-      if (!Array.isArray(extractedNames)) throw new Error("Not a valid array");
-    } catch (e) {
-      extractedNames = aiText
-        .split(",")
-        .map(n => n.trim())
-        .filter(n => n.length > 0);
+      const cleanedText = aiText
+        .replace(/```json|```/g, "") 
+        .replace(/\n/g, "")
+        .trim();
+
+      extractedNames = JSON.parse(cleanedText);
+
+      if (!Array.isArray(extractedNames)) {
+        throw new Error("AI response is not an array");
+      }
+    } catch (error) {
+      console.error("❌ Error parsing AI response:", error.message);
+      extractedNames = [];
     }
 
-    console.log("📄 Extracted Names:", extractedNames);
+    console.log("📄 Clean Extracted Names:", extractedNames);
 
     // 🔁 Build signers array
-    const signers = extractedNames.map(name => {
+    const signers = extractedNames.map((name) => {
       const normalized = name.trim().toLowerCase().replace(/\s+/g, "");
       const matched = normalized === normalizedOwnerName;
       return {
@@ -131,7 +147,10 @@ exports.sendDocument = async (req, res) => {
       editUrl,
     });
   } catch (error) {
-    console.error("❌ Error in sendDocument:", error?.response?.data || error.message);
+    console.error(
+      "❌ Error in sendDocument:",
+      error?.response?.data || error.message
+    );
     res.status(500).json({ error: "Failed to send document" });
   }
 };
