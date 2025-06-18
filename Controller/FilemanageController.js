@@ -194,10 +194,7 @@ exports.sendToWefile = async (req, res) => {
       }
     );
 
-    console.log("xxxxxxxxxxxx",response?.data);
-    
-
-    const Wefileurl = response?.data?.data?.wefile_link;
+    const Wefileurl = response?.data?.wefile_link;
 
     return res.status(200).json({
       message: "File uploaded successfully",
