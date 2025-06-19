@@ -1,4 +1,3 @@
-// models/UploadedFile.js
 const mongoose = require("mongoose");
 
 const UploadedFileSchema = new mongoose.Schema({
