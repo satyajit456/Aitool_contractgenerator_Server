@@ -87,6 +87,7 @@ exports.navlinkController = async (req, res) => {
     const profileImage = user.profile_image;
 
     const response = {
+      user_id,
       name: fullName,
       dashboard: `${baseUrl}/home_dashboard`,
       team: `${baseUrl}/setting/teams`,
