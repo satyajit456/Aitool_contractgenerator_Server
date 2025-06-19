@@ -2,13 +2,12 @@ const Contract = require("../Model/uploadfileModel");
 
 exports.getUserContracts = async (req, res) => {
   try {
-    const { user_id } = req.body;
+    const { user_id } = req.params;
 
     if (!user_id) {
       return res.status(400).json({ error: "User ID is required" });
     }
 
-    // Fetch contracts where userId matches the given user_id
     const contracts = await Contract.find({ userId: user_id });
 
     if (!contracts || contracts.length === 0) {
@@ -17,15 +16,34 @@ exports.getUserContracts = async (req, res) => {
         .json({ message: "No contracts found for this user." });
     }
 
-    const redirectLink = process.env.FRONTEND_URL + "contracts";
-
     return res.status(200).json({
       message: "Contracts fetched successfully",
       data: contracts,
-      redirectLink: redirectLink,
     });
   } catch (error) {
     console.error("Error fetching contracts:", error);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+//function for wesignature redirectLink 
+exports.WesignatureRedirectLink = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is required in body" });
+    }
+
+    const redirectLink = `${process.env.FRONTEND_URL}${user_id}`;
+
+    return res.status(200).json({
+      message: "Redirect link ",
+      redirectLink: redirectLink,
+    });
+  } catch (error) {
+    console.error("Error generating redirect link:", error);
     return res.status(500).json({ error: "Server error" });
   }
 };

@@ -1,9 +1,10 @@
 const express = require('express');
-const { getUserContracts } = require('../Controller/ContractsController');
+const { getUserContracts, WesignatureRedirectLink } = require('../Controller/ContractsController');
 const Router = express.Router();
 
 
-Router.post('/contracts',getUserContracts );
+Router.post('/contracts/:user_id',getUserContracts );
+Router.post('/getContracts', WesignatureRedirectLink);
 
 module.exports = Router;
 
