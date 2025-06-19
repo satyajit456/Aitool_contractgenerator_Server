@@ -1,6 +1,5 @@
 const Contract = require("../Model/uploadfileModel");
 
-const Contract = require("../Model/contractModel");
 
 exports.getUserContracts = async (req, res) => {
   try {
