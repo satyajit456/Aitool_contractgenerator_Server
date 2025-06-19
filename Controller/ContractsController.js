@@ -1,31 +1,25 @@
 const Contract = require("../Model/uploadfileModel");
 
-
 exports.getUserContracts = async (req, res) => {
   try {
     const { user_id } = req.params;
-    const page = parseInt(req.query.page) || 1;       
-    const limit = parseInt(req.query.limit) || 10;    
-    const skip = (page - 1) * limit;
 
     if (!user_id) {
       return res.status(400).json({ error: "User ID is required" });
     }
 
+    const contracts = await Contract.find({ userId: user_id });
 
-    const totalDocuments = await Contract.countDocuments({ userId: user_id });
-
-    const contracts = await Contract.find({ userId: user_id })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    if (!contracts || contracts.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No contracts found for this user." });
+    }
 
     return res.status(200).json({
       message: "Contracts fetched successfully",
       data: contracts,
-      totalDocuments,
-      currentPage: page,
-      totalPages: Math.ceil(totalDocuments / limit),
+      totalContracts: contracts.length,
     });
   } catch (error) {
     console.error("Error fetching contracts:", error);
@@ -33,9 +27,7 @@ exports.getUserContracts = async (req, res) => {
   }
 };
 
-
-
-//function for wesignature redirectLink 
+//function for wesignature redirectLink
 exports.WesignatureRedirectLink = async (req, res) => {
   try {
     const { user_id } = req.body;
