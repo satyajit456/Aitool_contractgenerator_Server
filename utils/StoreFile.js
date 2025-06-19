@@ -1,10 +1,11 @@
 const UploadedFile = require("../Model/uploadfileModel");
 
-const storeFileInDb = async ({ userId, email, filename, content, action }) => {
+const storeFileInDb = async ({ userId, email,name, filename, content, action }) => {
   try {
     await UploadedFile.create({
       userId,
       email,
+      name,
       filename,
       content,
       action,

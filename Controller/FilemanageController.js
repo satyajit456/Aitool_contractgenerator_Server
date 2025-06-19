@@ -261,7 +261,7 @@ exports.sendToWefile = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id, email,name } = JSON.parse(userDataRaw);
+    const { user_id, email, name } = JSON.parse(userDataRaw);
 
     const randomName = crypto.randomBytes(6).toString("hex");
     const customFileName = `${randomName}-wesignature-ai.pdf`;
