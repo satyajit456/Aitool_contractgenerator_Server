@@ -191,6 +191,7 @@ exports.sendToWesignature = async (req, res) => {
 
     await storeFileInDb({
       userId: user_id,
+      name: ownerName,
       email: ownerEmail,
       filename: file.originalname,
       content: base64Content,
@@ -260,7 +261,7 @@ exports.sendToWefile = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id, email } = JSON.parse(userDataRaw);
+    const { user_id, email,name } = JSON.parse(userDataRaw);
 
     const randomName = crypto.randomBytes(6).toString("hex");
     const customFileName = `${randomName}-wesignature-ai.pdf`;
@@ -268,6 +269,7 @@ exports.sendToWefile = async (req, res) => {
     await storeFileInDb({
       userId: user_id,
       email,
+      name,
       filename: customFileName,
       content: base64Content,
       action: "wefile",
@@ -323,7 +325,7 @@ exports.sendToSaveTemplate = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id, email } = JSON.parse(userDataRaw);
+    const { user_id, email,name } = JSON.parse(userDataRaw);
 
     const randomName = crypto.randomBytes(6).toString("hex");
     const customFileName = `${randomName}-wesignature-ai.pdf`;
@@ -331,6 +333,7 @@ exports.sendToSaveTemplate = async (req, res) => {
     await storeFileInDb({
       userId: user_id,
       email,
+      name,
       filename: customFileName,
       content: base64Content,
       action: "template",
