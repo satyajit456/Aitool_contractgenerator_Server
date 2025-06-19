@@ -36,7 +36,7 @@ exports.WesignatureRedirectLink = async (req, res) => {
       return res.status(400).json({ error: "User ID is required in body" });
     }
 
-    const redirectLink = `${process.env.FRONTEND_URL}${user_id}`;
+    const redirectLink = `${process.env.FRONTEND_URL}contracts/${user_id}`;
 
     return res.status(200).json({
       message: "Redirect link ",
