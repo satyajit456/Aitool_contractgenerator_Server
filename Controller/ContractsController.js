@@ -17,10 +17,12 @@ exports.getUserContracts = async (req, res) => {
         .json({ message: "No contracts found for this user." });
     }
 
+    const redirectLink = process.env.FRONTEND_URL + "/contracts";
+
     return res.status(200).json({
-      success: true,
       message: "Contracts fetched successfully",
       data: contracts,
+      redirectLink: redirectLink,
     });
   } catch (error) {
     console.error("Error fetching contracts:", error);
