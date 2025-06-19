@@ -1,13 +1,32 @@
 const axios = require("axios");
 const redis = require("../config/redisConfig");
 const pdfParse = require("pdf-parse");
+const crypto = require("crypto");
+const User = require("../Model/userModel");
+const storeFileInDb = require("../utils/StoreFile");
 
 // redirection controller
 exports.redirectionController = async (req, res) => {
   try {
-    const { user_id, api_key, name, email } = req.body;
+    const {
+      user_id,
+      api_key,
+      name,
+      last_name,
+      email,
+      parent_url,
+      profile_image,
+    } = req.body;
 
-    console.log("Redirection data:", { user_id, api_key, name, email });
+    console.log("Redirection data:", {
+      user_id,
+      api_key,
+      name,
+      last_name,
+      email,
+      parent_url,
+      profile_image,
+    });
 
     if (!user_id || !api_key || !name || !email) {
       return res.status(400).json({ error: "Missing user data" });
@@ -18,11 +37,73 @@ exports.redirectionController = async (req, res) => {
       JSON.stringify({ user_id, api_key, name, email })
     );
 
+    const existingUser = await User.findOne({ user_id });
+
+    if (!existingUser) {
+      await User.create({
+        user_id,
+        api_key,
+        name,
+        last_name,
+        email,
+        parent_url,
+        profile_image,
+      });
+      console.log("New user saved to MongoDB.");
+    } else {
+      console.log("User already exists. Skipping save.");
+    }
+
     const redirectUrl = process.env.FRONTEND_URL;
 
     res.status(200).json({ redirectUrl });
   } catch (error) {
     console.error("Error in redirectionController:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+//navlink url controller
+exports.navlinkController = async (req, res) => {
+  try {
+    const redisData = await redis.get("userdata");
+
+    if (!redisData) {
+      return res
+        .status(401)
+        .json({ error: "User not authenticated or Redis expired" });
+    }
+
+    const { user_id } = JSON.parse(redisData);
+
+    const user = await User.findOne({ user_id });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const fullName = `${user.name}`.trim();
+    const baseUrl = user.parent_url?.replace(/\/$/, "") || "";
+    const profileImage = user.profile_image;
+
+    const response = {
+      name: fullName,
+      dashboard: `${baseUrl}/home_dashboard`,
+      team: `${baseUrl}/setting/teams`,
+      documents: `${baseUrl}/documents/documentslistbeta`,
+      wefile: `${baseUrl}/wefile`,
+      payment: `${baseUrl}/payments`,
+      templates: `${baseUrl}/templates`,
+      videos: `${baseUrl}/videos`,
+      settings: `${baseUrl}/setting`,
+      profileImage: profileImage,
+      upgrade: `${baseUrl}/subscription/new-plans`,
+      logout: `${baseUrl}/logout`,
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error in navlinkController:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -108,6 +189,14 @@ exports.sendToWesignature = async (req, res) => {
 
     const base64Content = file.buffer.toString("base64");
 
+    await storeFileInDb({
+      userId: user_id,
+      email: ownerEmail,
+      filename: file.originalname,
+      content: base64Content,
+      action: "wesignature",
+    });
+
     const payload = {
       user_id,
       api_key,
@@ -171,14 +260,25 @@ exports.sendToWefile = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id } = JSON.parse(userDataRaw);
+    const { user_id, email } = JSON.parse(userDataRaw);
+
+    const randomName = crypto.randomBytes(6).toString("hex");
+    const customFileName = `${randomName}-wesignature-ai.pdf`;
+
+    await storeFileInDb({
+      userId: user_id,
+      email,
+      filename: customFileName,
+      content: base64Content,
+      action: "wefile",
+    });
 
     const payload = {
       user_id,
       uploaddocument: [
         {
           content: base64Content,
-          filename: file.originalname,
+          filename: customFileName,
         },
       ],
     };
@@ -203,5 +303,68 @@ exports.sendToWefile = async (req, res) => {
   } catch (error) {
     console.error("Error in sendToWefile:", error);
     res.status(500).json({ error: "Failed to upload file" });
+  }
+};
+
+//function to send file to save template
+exports.sendToSaveTemplate = async (req, res) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const base64Content = file.buffer.toString("base64");
+
+    const userDataRaw = await redis.get("userdata");
+
+    if (!userDataRaw) {
+      return res.status(401).json({ error: "User not found in Redis" });
+    }
+
+    const { user_id,email } = JSON.parse(userDataRaw);
+
+    const randomName = crypto.randomBytes(6).toString("hex");
+    const customFileName = `${randomName}-wesignature-ai.pdf`;
+
+    await storeFileInDb({
+  userId: user_id,
+  email, 
+  filename: customFileName,
+  content: base64Content,
+  action: "template",
+});
+
+    const payload = {
+      user_id,
+      uploaddocument: [
+        {
+          content: base64Content,
+          filename: customFileName,
+        },
+      ],
+    };
+
+    const response = await axios.post(
+      `${process.env.WESIGNATURE_URL}/apihandler/signaction`,
+      payload,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const templateUrl = response?.data?.temp_link;
+
+    return res.status(200).json({
+      message: "Template saved successfully",
+      templateUrl: templateUrl,
+    });
+  } catch (error) {
+    console.error("Error in sendToSaveTemplate:", error);
+    res.status(500).json({ error: "Failed to save template" });
   }
 };

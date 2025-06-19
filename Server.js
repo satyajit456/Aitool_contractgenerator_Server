@@ -48,8 +48,9 @@ app.use("/api", file);
 
 // dbConnection-------------->
 // createAdmin();
-// dbConnection();
+
 
 server.listen(process.env.PORT, () => {
+  dbConnection();
   console.log(`🚀 Server running successfully`);
 });
