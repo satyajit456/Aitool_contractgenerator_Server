@@ -17,7 +17,7 @@ exports.getUserContracts = async (req, res) => {
         .json({ message: "No contracts found for this user." });
     }
 
-    const redirectLink = process.env.FRONTEND_URL + "/contracts";
+    const redirectLink = process.env.FRONTEND_URL + "contracts";
 
     return res.status(200).json({
       message: "Contracts fetched successfully",
