@@ -26,7 +26,6 @@ app.use(function (err, req, res, next) {
     next(err);
   }
 });
-// redisconfig()
 
 // Create the server---------->
 const server = http.createServer(app);
