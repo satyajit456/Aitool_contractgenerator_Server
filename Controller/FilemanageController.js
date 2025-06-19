@@ -323,18 +323,18 @@ exports.sendToSaveTemplate = async (req, res) => {
       return res.status(401).json({ error: "User not found in Redis" });
     }
 
-    const { user_id,email } = JSON.parse(userDataRaw);
+    const { user_id, email } = JSON.parse(userDataRaw);
 
     const randomName = crypto.randomBytes(6).toString("hex");
     const customFileName = `${randomName}-wesignature-ai.pdf`;
 
     await storeFileInDb({
-  userId: user_id,
-  email, 
-  filename: customFileName,
-  content: base64Content,
-  action: "template",
-});
+      userId: user_id,
+      email,
+      filename: customFileName,
+      content: base64Content,
+      action: "template",
+    });
 
     const payload = {
       user_id,
