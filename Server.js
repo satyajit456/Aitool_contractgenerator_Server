@@ -33,6 +33,7 @@ const server = http.createServer(app);
 //Route Import----------------->
 const propmt = require("./Routes/AiRoutes");
 const file = require("./Routes/FileRoutes");
+const contracts = require("./Routes/ContractsRoute");
 
 
 
@@ -41,6 +42,7 @@ app.get("/test", (req, res) => {
 });
 app.use("/api", propmt);
 app.use("/api", file);
+app.use("/api", contracts);
 
 
 
